@@ -1,11 +1,16 @@
 import azure.functions as func
 import logging
 
-app = func.FunctionApp(http_auth_level=func.AuthLevel.FUNCTION)
+from openai import OpenAI;
 
+secret_key = ""
 
-@app.route(route="firstfunctionapi", auth_level=func.AuthLevel.ANONYMOUS)
-def firstfunctionapi(req: func.HttpRequest) -> func.HttpResponse:
+# { "model": "gpt-3.5-turbo", "prompt": "Give me date ideas", "max_tokens": 100, "temperature": 1 }
+
+app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
+
+@app.route(route="primeraFuncion")
+def primeraFuncion(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('Python HTTP trigger function processed a request.')
 
     name = req.params.get('name')
@@ -23,4 +28,50 @@ def firstfunctionapi(req: func.HttpRequest) -> func.HttpResponse:
         return func.HttpResponse(
              "This HTTP triggered function executed successfully. Pass a name in the query string or in the request body for a personalized response.",
              status_code=200
+        )
+
+
+@app.route(route="completionAPI", auth_level=func.AuthLevel.ANONYMOUS)
+def completionAPI(req: func.HttpRequest) -> func.HttpResponse:
+    logging.info('Python HTTP trigger function processed a request.')
+
+    req_body = req.get_json()
+    
+    client = OpenAI(api_key=secret_key,)
+
+    completion = client.chat.completions.create(
+    model="gpt-3.5-turbo",
+    messages=[
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": req_body["prompt"]}
+    ],
+    temperature = 1
+    )
+
+    print(completion.choices[0].message.content)
+    
+    return func.HttpResponse(
+        completion.choices[0].message.content,
+        status_code=200
+        )
+
+
+@app.route(route="imageAPI", auth_level=func.AuthLevel.ANONYMOUS)
+def imageAPI(req: func.HttpRequest) -> func.HttpResponse:
+    logging.info('Python HTTP trigger function processed a request.')
+    
+    req_body = req.get_json()
+
+    client = OpenAI(api_key=secret_key,)
+    
+    image = client.images.generate(
+        model="dall-e-3",
+        prompt=req_body["prompt"],
+        n=1,
+        size="1024x1024"
+        )
+
+    return func.HttpResponse(
+        image.data[0].url,
+        status_code=200
         )
